@@ -9,6 +9,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
+import FileUpload from './FileUpload';
+import { type UploadedFile } from '@/lib/storage';
 
 interface CreatePostDialogProps {
   open: boolean;
@@ -24,6 +26,7 @@ export default function CreatePostDialog({
   onPostCreated
 }: CreatePostDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -34,7 +37,6 @@ export default function CreatePostDialog({
     const type = formData.get('type') as 'announcement' | 'material';
     const authorName = formData.get('authorName') as string;
     const authorRole = formData.get('authorRole') as 'teacher' | 'student';
-    const attachments = formData.get('attachments') as string;
 
     if (!content || !authorName || !authorRole || !type) {
       toast.error('Please fill in all required fields');
@@ -43,8 +45,14 @@ export default function CreatePostDialog({
     }
 
     try {
-      const attachmentArray = attachments 
-        ? attachments.split(',').map(item => item.trim()).filter(Boolean)
+      // Convert uploaded files to attachment format
+      const attachments = uploadedFiles.length > 0 
+        ? uploadedFiles.map(file => JSON.stringify({
+            name: file.name,
+            url: file.url,
+            size: file.size,
+            type: file.type
+          }))
         : null;
 
       const { error } = await supabase
@@ -55,12 +63,13 @@ export default function CreatePostDialog({
           type,
           author_name: authorName,
           author_role: authorRole,
-          attachments: attachmentArray
+          attachments
         });
 
       if (error) throw error;
 
       toast.success('Post created successfully!');
+      setUploadedFiles([]);
       onPostCreated();
     } catch (error) {
       console.error('Error creating post:', error);
@@ -70,38 +79,48 @@ export default function CreatePostDialog({
     }
   };
 
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+      setUploadedFiles([]);
+    }
+    onOpenChange(open);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-slate-900/95 border-slate-700 max-w-lg">
+    <Dialog open={open} onOpenChange={handleDialogClose}>
+      <DialogContent className="bg-slate-900/95 border-slate-700 max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-white">Create Post</DialogTitle>
           <DialogDescription>
             Share an announcement or material with your class
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="authorName" className="text-white">Your Name</Label>
-            <Input
-              id="authorName"
-              name="authorName"
-              placeholder="Enter your name"
-              required
-              className="bg-slate-800 border-slate-600 text-white"
-            />
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="authorName" className="text-white">Your Name</Label>
+              <Input
+                id="authorName"
+                name="authorName"
+                placeholder="Enter your name"
+                required
+                className="bg-slate-800 border-slate-600 text-white"
+              />
+            </div>
+            <div>
+              <Label htmlFor="authorRole" className="text-white">Your Role</Label>
+              <Select name="authorRole" required>
+                <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
+                  <SelectValue placeholder="Select your role" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-800 border-slate-600">
+                  <SelectItem value="teacher">Teacher</SelectItem>
+                  <SelectItem value="student">Student</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div>
-            <Label htmlFor="authorRole" className="text-white">Your Role</Label>
-            <Select name="authorRole" required>
-              <SelectTrigger className="bg-slate-800 border-slate-600 text-white">
-                <SelectValue placeholder="Select your role" />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-800 border-slate-600">
-                <SelectItem value="teacher">Teacher</SelectItem>
-                <SelectItem value="student">Student</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          
           <div>
             <Label htmlFor="type" className="text-white">Post Type</Label>
             <Select name="type" required>
@@ -114,6 +133,7 @@ export default function CreatePostDialog({
               </SelectContent>
             </Select>
           </div>
+          
           <div>
             <Label htmlFor="content" className="text-white">Content</Label>
             <Textarea
@@ -125,23 +145,22 @@ export default function CreatePostDialog({
               className="bg-slate-800 border-slate-600 text-white"
             />
           </div>
+
           <div>
-            <Label htmlFor="attachments" className="text-white">Attachments (Optional)</Label>
-            <Input
-              id="attachments"
-              name="attachments"
-              placeholder="Enter file names/URLs separated by commas"
-              className="bg-slate-800 border-slate-600 text-white"
+            <Label className="text-white mb-3 block">Attachments</Label>
+            <FileUpload
+              onFilesChange={setUploadedFiles}
+              initialFiles={uploadedFiles}
+              maxFiles={5}
+              folder="posts"
             />
-            <p className="text-xs text-gray-400 mt-1">
-              Separate multiple attachments with commas
-            </p>
           </div>
+
           <div className="flex gap-3">
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange(false)}
+              onClick={() => handleDialogClose(false)}
               className="flex-1 border-slate-600 text-gray-300"
             >
               Cancel

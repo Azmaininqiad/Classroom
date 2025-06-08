@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ArrowLeft, Users, BookOpen, FileText, Plus, Calendar, User, Clock, Video, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Users, BookOpen, FileText, Plus, Calendar, User, Clock, Video, MessageSquare, Download } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -45,6 +45,7 @@ interface Assignment {
   due_date: string;
   points: number;
   created_by: string;
+  attachments: string[] | null;
   created_at: string;
 }
 
@@ -136,6 +137,56 @@ export default function ClassroomPage() {
   const handleAssignmentCreated = () => {
     fetchClassroomData();
     setCreateAssignmentOpen(false);
+  };
+
+  const renderAttachments = (attachments: string[] | null) => {
+    if (!attachments || attachments.length === 0) return null;
+
+    return (
+      <div className="space-y-2 mt-4">
+        <p className="text-sm font-medium text-gray-300">Attachments:</p>
+        {attachments.map((attachment, index) => {
+          try {
+            const fileData = JSON.parse(attachment);
+            return (
+              <div key={index} className="bg-slate-800/50 p-3 rounded-lg border border-slate-600 hover:bg-slate-700/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-xl">
+                      {fileData.type?.startsWith('image/') ? '🖼️' : 
+                       fileData.type?.includes('pdf') ? '📄' : 
+                       fileData.type?.includes('presentation') ? '📊' : 
+                       fileData.type?.includes('document') ? '📝' : '📎'}
+                    </span>
+                    <div>
+                      <p className="text-sm text-blue-300 font-medium">{fileData.name}</p>
+                      <p className="text-xs text-gray-400">
+                        {fileData.size ? `${Math.round(fileData.size / 1024)} KB` : 'Unknown size'}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.open(fileData.url, '_blank')}
+                    className="text-blue-400 hover:text-blue-300"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            );
+          } catch (e) {
+            // Fallback for old format
+            return (
+              <div key={index} className="bg-slate-800/50 p-3 rounded-lg border border-slate-600 hover:bg-slate-700/50 transition-colors">
+                <p className="text-sm text-blue-300">{attachment}</p>
+              </div>
+            );
+          }
+        })}
+      </div>
+    );
   };
 
   const teachers = members.filter(member => member.role === 'teacher');
@@ -354,16 +405,7 @@ export default function ClassroomPage() {
                         </CardHeader>
                         <CardContent>
                           <p className="text-gray-300 whitespace-pre-wrap mb-4">{post.content}</p>
-                          {post.attachments && post.attachments.length > 0 && (
-                            <div className="space-y-2">
-                              <p className="text-sm font-medium text-gray-300">Attachments:</p>
-                              {post.attachments.map((attachment, index) => (
-                                <div key={index} className="bg-slate-800/50 p-3 rounded-lg border border-slate-600 hover:bg-slate-700/50 transition-colors">
-                                  <p className="text-sm text-blue-300">{attachment}</p>
-                                </div>
-                              ))}
-                            </div>
-                          )}
+                          {renderAttachments(post.attachments)}
                         </CardContent>
                       </Card>
                     ))
@@ -425,7 +467,8 @@ export default function ClassroomPage() {
                         </div>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-gray-300 line-clamp-3">{assignment.description}</p>
+                        <p className="text-gray-300 line-clamp-3 mb-4">{assignment.description}</p>
+                        {renderAttachments(assignment.attachments)}
                       </CardContent>
                     </Card>
                   ))

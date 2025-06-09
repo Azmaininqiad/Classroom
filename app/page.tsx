@@ -16,7 +16,8 @@ import {
   Zap,
   Globe,
   Shield,
-  Rocket
+  Rocket,
+  Calendar
 } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
@@ -55,6 +56,10 @@ export default function WelcomePage() {
     } else {
       setAuthOpen(true);
     }
+  };
+
+  const handleEventsPage = () => {
+    router.push('/events');
   };
 
   if (loading) {
@@ -137,12 +142,13 @@ export default function WelcomePage() {
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
               <Button
+                onClick={handleEventsPage}
                 variant="outline"
                 size="lg"
                 className="border-white/20 text-white hover:bg-white/10 text-lg px-8 py-6 rounded-xl backdrop-blur-sm"
               >
-                <BookOpen className="mr-2 h-5 w-5" />
-                Learn More
+                <Calendar className="mr-2 h-5 w-5" />
+                Explore Events
               </Button>
             </div>
 
@@ -294,15 +300,26 @@ export default function WelcomePage() {
                 Join our community today and experience the future of education. 
                 Create your first classroom in minutes.
               </p>
-              <Button
-                onClick={handleGetStarted}
-                size="lg"
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-12 py-6 rounded-xl shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 transform hover:scale-105"
-              >
-                <Sparkles className="mr-2 h-5 w-5" />
-                {user ? 'Go to Dashboard' : 'Start Learning Today'}
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button
+                  onClick={handleGetStarted}
+                  size="lg"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-12 py-6 rounded-xl shadow-2xl hover:shadow-blue-500/25 transition-all duration-300 transform hover:scale-105"
+                >
+                  <Sparkles className="mr-2 h-5 w-5" />
+                  {user ? 'Go to Dashboard' : 'Start Learning Today'}
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+                <Button
+                  onClick={handleEventsPage}
+                  variant="outline"
+                  size="lg"
+                  className="border-white/20 text-white hover:bg-white/10 text-lg px-12 py-6 rounded-xl backdrop-blur-sm"
+                >
+                  <Calendar className="mr-2 h-5 w-5" />
+                  Browse Events
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </section>

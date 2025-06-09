@@ -46,6 +46,12 @@ export default function UserProfile({ onSignOut }: UserProfileProps) {
     onSignOut();
   };
 
+  const handleProfileClick = () => {
+    if (user?.id) {
+      router.push(`/profile/${user.id}`);
+    }
+  };
+
   if (!user) return null;
 
   const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'User';
@@ -79,7 +85,10 @@ export default function UserProfile({ onSignOut }: UserProfileProps) {
           <BookOpen className="mr-2 h-4 w-4" />
           <span>Dashboard</span>
         </DropdownMenuItem>
-        <DropdownMenuItem className="text-gray-300 hover:text-white hover:bg-slate-800 cursor-pointer">
+        <DropdownMenuItem 
+          className="text-gray-300 hover:text-white hover:bg-slate-800 cursor-pointer"
+          onClick={handleProfileClick}
+        >
           <User className="mr-2 h-4 w-4" />
           <span>Profile</span>
         </DropdownMenuItem>

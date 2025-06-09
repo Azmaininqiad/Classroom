@@ -1,21 +1,16 @@
 /*
-  # Updated Submission Dialog with File Upload
+  # Updated Submission Dialog with Evaluation Features
 
   1. New Features
-    - File upload component integrated into submission form
-    - Files stored in submissions/{assignment_id}/{submission_id}/ folder
-    - Support for multiple file types and sizes
-    - Visual file preview and management
+    - Answer Key button for teachers
+    - Single Evaluation button for individual submissions
+    - Multiple Evaluation button for batch processing
+    - Results button to view all evaluations
 
-  2. File Organization
-    - Each submission gets its own folder
-    - Files are organized by assignment ID and submission ID
-    - Easy to manage and retrieve submission files
-
-  3. Enhanced UI
-    - Better form layout with file upload section
-    - Improved file display in submission list
-    - Download functionality for submitted files
+  2. Enhanced UI
+    - Better organization of submission management
+    - Evaluation action buttons in submission cards
+    - Integration with new evaluation dialogs
 */
 
 'use client';
@@ -29,11 +24,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Calendar, Clock, User, FileText, CheckCircle, Download } from 'lucide-react';
+import { Calendar, Clock, User, FileText, CheckCircle, Download, Key, GraduationCap, BarChart3, Users } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import FileUpload from './FileUpload';
+import AnswerKeyDialog from './AnswerKeyDialog';
+import EvaluationDialog from './EvaluationDialog';
+import ResultsDialog from './ResultsDialog';
 import { type UploadedFile } from '@/lib/storage';
 
 interface Assignment {
@@ -74,6 +72,13 @@ export default function SubmissionDialog({
   const [submitting, setSubmitting] = useState(false);
   const [showSubmitForm, setShowSubmitForm] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  
+  // Dialog states
+  const [answerKeyOpen, setAnswerKeyOpen] = useState(false);
+  const [evaluationOpen, setEvaluationOpen] = useState(false);
+  const [resultsOpen, setResultsOpen] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
+  const [evaluationType, setEvaluationType] = useState<'single' | 'multiple'>('single');
 
   useEffect(() => {
     if (open && assignment) {
@@ -163,6 +168,24 @@ export default function SubmissionDialog({
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleSingleEvaluation = (submission: Submission) => {
+    setSelectedSubmission(submission);
+    setEvaluationType('single');
+    setEvaluationOpen(true);
+  };
+
+  const handleMultipleEvaluation = () => {
+    setSelectedSubmission(null);
+    setEvaluationType('multiple');
+    setEvaluationOpen(true);
+  };
+
+  const handleEvaluationCreated = () => {
+    setEvaluationOpen(false);
+    setSelectedSubmission(null);
+    fetchSubmissions();
   };
 
   const renderAttachments = (attachments: string[] | null) => {
@@ -276,177 +299,253 @@ export default function SubmissionDialog({
   const isOverdue = new Date() > new Date(assignment.due_date);
 
   return (
-    <Dialog open={open} onOpenChange={handleDialogClose}>
-      <DialogContent className="bg-slate-900/95 border-slate-700 max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-white text-xl">{assignment.title}</DialogTitle>
-          <DialogDescription className="text-gray-300">
-            Assignment details and submissions
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={handleDialogClose}>
+        <DialogContent className="bg-slate-900/95 border-slate-700 max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-white text-xl">{assignment.title}</DialogTitle>
+            <DialogDescription className="text-gray-300">
+              Assignment details and submissions
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-6">
-          {/* Assignment Details */}
-          <Card className="glass-effect">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center">
-                <FileText className="h-5 w-5 mr-2" />
-                Assignment Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <p className="text-gray-300">{assignment.description}</p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div className="flex items-center text-gray-400">
-                  <User className="h-4 w-4 mr-2" />
-                  Created by: {assignment.created_by}
-                </div>
-                <div className="flex items-center text-gray-400">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Due: {format(new Date(assignment.due_date), 'MMM d, yyyy at h:mm a')}
-                </div>
-                <div className="flex items-center text-gray-400">
-                  <Clock className="h-4 w-4 mr-2" />
-                  Points: {assignment.points}
-                </div>
-              </div>
-              {isOverdue && (
-                <Badge variant="destructive" className="bg-red-600">
-                  Overdue
-                </Badge>
-              )}
-              {renderAssignmentAttachments(assignment.attachments)}
-            </CardContent>
-          </Card>
-
-          {/* Submit Assignment */}
-          {!showSubmitForm ? (
-            <div className="text-center">
-              <Button
-                onClick={() => setShowSubmitForm(true)}
-                className="bg-green-600 hover:bg-green-700"
-                disabled={isOverdue}
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                {isOverdue ? 'Assignment Overdue' : 'Submit Assignment'}
-              </Button>
-            </div>
-          ) : (
+          <div className="space-y-6">
+            {/* Assignment Details */}
             <Card className="glass-effect">
               <CardHeader>
-                <CardTitle className="text-white">Submit Your Work</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div>
-                    <Label htmlFor="studentName" className="text-white">Your Name</Label>
-                    <Input
-                      id="studentName"
-                      name="studentName"
-                      placeholder="Enter your full name"
-                      required
-                      className="bg-slate-800 border-slate-600 text-white"
-                    />
-                  </div>
-                  <div>
-                    <Label htmlFor="content" className="text-white">Submission Content</Label>
-                    <Textarea
-                      id="content"
-                      name="content"
-                      placeholder="Enter your submission or answer..."
-                      required
-                      rows={4}
-                      className="bg-slate-800 border-slate-600 text-white"
-                    />
-                  </div>
-                  
-                  {/* File Upload Section */}
-                  <div>
-                    <Label className="text-white mb-3 block">Submission Files</Label>
-                    <FileUpload
-                      onFilesChange={setUploadedFiles}
-                      initialFiles={uploadedFiles}
-                      maxFiles={10}
-                      folder={`submissions/${assignment.id}`}
-                    />
-                  </div>
-
-                  <div className="flex gap-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-white flex items-center">
+                    <FileText className="h-5 w-5 mr-2" />
+                    Assignment Details
+                  </CardTitle>
+                  {/* Teacher Actions */}
+                  <div className="flex gap-2">
                     <Button
-                      type="button"
+                      onClick={() => setAnswerKeyOpen(true)}
                       variant="outline"
-                      onClick={() => setShowSubmitForm(false)}
-                      className="flex-1 border-slate-600 text-gray-300"
+                      size="sm"
+                      className="border-yellow-500/50 text-yellow-400 hover:bg-yellow-500/10"
                     >
-                      Cancel
+                      <Key className="h-4 w-4 mr-1" />
+                      Answer Key
                     </Button>
                     <Button
-                      type="submit"
-                      disabled={submitting}
-                      className="flex-1 bg-green-600 hover:bg-green-700"
+                      onClick={() => setResultsOpen(true)}
+                      variant="outline"
+                      size="sm"
+                      className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
                     >
-                      {submitting ? 'Submitting...' : 'Submit Assignment'}
+                      <BarChart3 className="h-4 w-4 mr-1" />
+                      Results
                     </Button>
                   </div>
-                </form>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-gray-300">{assignment.description}</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="flex items-center text-gray-400">
+                    <User className="h-4 w-4 mr-2" />
+                    Created by: {assignment.created_by}
+                  </div>
+                  <div className="flex items-center text-gray-400">
+                    <Calendar className="h-4 w-4 mr-2" />
+                    Due: {format(new Date(assignment.due_date), 'MMM d, yyyy at h:mm a')}
+                  </div>
+                  <div className="flex items-center text-gray-400">
+                    <Clock className="h-4 w-4 mr-2" />
+                    Points: {assignment.points}
+                  </div>
+                </div>
+                {isOverdue && (
+                  <Badge variant="destructive" className="bg-red-600">
+                    Overdue
+                  </Badge>
+                )}
+                {renderAssignmentAttachments(assignment.attachments)}
               </CardContent>
             </Card>
-          )}
 
-          {/* Submissions */}
-          <Card className="glass-effect">
-            <CardHeader>
-              <CardTitle className="text-white flex items-center justify-between">
-                <span>Submissions ({submissions.length})</span>
+            {/* Submit Assignment */}
+            {!showSubmitForm ? (
+              <div className="text-center">
                 <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={fetchSubmissions}
-                  disabled={loading}
-                  className="border-slate-600 text-gray-300"
+                  onClick={() => setShowSubmitForm(true)}
+                  className="bg-green-600 hover:bg-green-700"
+                  disabled={isOverdue}
                 >
-                  {loading ? 'Loading...' : 'Refresh'}
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  {isOverdue ? 'Assignment Overdue' : 'Submit Assignment'}
                 </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {submissions.length === 0 ? (
-                <p className="text-gray-400 text-center py-4">No submissions yet</p>
-              ) : (
-                <div className="space-y-4">
-                  {submissions.map((submission) => (
-                    <div key={submission.id} className="bg-slate-800/50 p-4 rounded-lg border border-slate-600">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center space-x-3">
-                          <Avatar>
-                            <AvatarFallback className="bg-green-600 text-white">
-                              {submission.student_name.charAt(0).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-white">{submission.student_name}</p>
-                            <p className="text-sm text-gray-400">
-                              {format(new Date(submission.submitted_at), 'MMM d, yyyy at h:mm a')}
-                            </p>
+              </div>
+            ) : (
+              <Card className="glass-effect">
+                <CardHeader>
+                  <CardTitle className="text-white">Submit Your Work</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    <div>
+                      <Label htmlFor="studentName" className="text-white">Your Name</Label>
+                      <Input
+                        id="studentName"
+                        name="studentName"
+                        placeholder="Enter your full name"
+                        required
+                        className="bg-slate-800 border-slate-600 text-white"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="content" className="text-white">Submission Content</Label>
+                      <Textarea
+                        id="content"
+                        name="content"
+                        placeholder="Enter your submission or answer..."
+                        required
+                        rows={4}
+                        className="bg-slate-800 border-slate-600 text-white"
+                      />
+                    </div>
+                    
+                    {/* File Upload Section */}
+                    <div>
+                      <Label className="text-white mb-3 block">Submission Files</Label>
+                      <FileUpload
+                        onFilesChange={setUploadedFiles}
+                        initialFiles={uploadedFiles}
+                        maxFiles={10}
+                        folder={`submissions/${assignment.id}`}
+                      />
+                    </div>
+
+                    <div className="flex gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowSubmitForm(false)}
+                        className="flex-1 border-slate-600 text-gray-300"
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={submitting}
+                        className="flex-1 bg-green-600 hover:bg-green-700"
+                      >
+                        {submitting ? 'Submitting...' : 'Submit Assignment'}
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Submissions */}
+            <Card className="glass-effect">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-white flex items-center">
+                    <span>Submissions ({submissions.length})</span>
+                  </CardTitle>
+                  <div className="flex gap-2">
+                    {submissions.length > 0 && (
+                      <Button
+                        onClick={handleMultipleEvaluation}
+                        variant="outline"
+                        size="sm"
+                        className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
+                      >
+                        <Users className="h-4 w-4 mr-1" />
+                        Multiple Evaluation
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={fetchSubmissions}
+                      disabled={loading}
+                      className="border-slate-600 text-gray-300"
+                    >
+                      {loading ? 'Loading...' : 'Refresh'}
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {submissions.length === 0 ? (
+                  <p className="text-gray-400 text-center py-4">No submissions yet</p>
+                ) : (
+                  <div className="space-y-4">
+                    {submissions.map((submission) => (
+                      <div key={submission.id} className="bg-slate-800/50 p-4 rounded-lg border border-slate-600">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center space-x-3">
+                            <Avatar>
+                              <AvatarFallback className="bg-green-600 text-white">
+                                {submission.student_name.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium text-white">{submission.student_name}</p>
+                              <p className="text-sm text-gray-400">
+                                {format(new Date(submission.submitted_at), 'MMM d, yyyy at h:mm a')}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Badge
+                              variant={submission.status === 'submitted' ? 'default' : 'destructive'}
+                              className={submission.status === 'submitted' ? 'bg-green-600' : 'bg-orange-600'}
+                            >
+                              {submission.status}
+                            </Badge>
+                            <Button
+                              onClick={() => handleSingleEvaluation(submission)}
+                              variant="outline"
+                              size="sm"
+                              className="border-green-500/50 text-green-400 hover:bg-green-500/10"
+                            >
+                              <GraduationCap className="h-4 w-4 mr-1" />
+                              Evaluate
+                            </Button>
                           </div>
                         </div>
-                        <Badge
-                          variant={submission.status === 'submitted' ? 'default' : 'destructive'}
-                          className={submission.status === 'submitted' ? 'bg-green-600' : 'bg-orange-600'}
-                        >
-                          {submission.status}
-                        </Badge>
+                        <p className="text-gray-300 mb-3">{submission.content}</p>
+                        {renderAttachments(submission.attachments)}
                       </div>
-                      <p className="text-gray-300 mb-3">{submission.content}</p>
-                      {renderAttachments(submission.attachments)}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </DialogContent>
-    </Dialog>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Answer Key Dialog */}
+      <AnswerKeyDialog
+        open={answerKeyOpen}
+        onOpenChange={setAnswerKeyOpen}
+        assignmentId={assignment.id}
+        assignmentTitle={assignment.title}
+      />
+
+      {/* Evaluation Dialog */}
+      <EvaluationDialog
+        open={evaluationOpen}
+        onOpenChange={setEvaluationOpen}
+        submission={selectedSubmission}
+        evaluationType={evaluationType}
+        onEvaluationCreated={handleEvaluationCreated}
+      />
+
+      {/* Results Dialog */}
+      <ResultsDialog
+        open={resultsOpen}
+        onOpenChange={setResultsOpen}
+        assignmentId={assignment.id}
+        assignmentTitle={assignment.title}
+      />
+    </>
   );
 }

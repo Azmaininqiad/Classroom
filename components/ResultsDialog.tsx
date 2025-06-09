@@ -148,17 +148,19 @@ export default function ResultsDialog({
   };
 
   const exportResults = () => {
-    const csvContent = [
-      ['Student Name', 'Total Marks', 'Obtained Marks', 'Percentage', 'Grade', 'Evaluation Date'],
-      ...evaluations.map(eval => [
-        eval.student_name,
-        eval.total_marks.toString(),
-        eval.obtained_marks.toString(),
-        eval.percentage.toFixed(2),
-        eval.grade,
-        format(new Date(eval.created_at), 'yyyy-MM-dd HH:mm:ss')
-      ])
-    ].map(row => row.join(',')).join('\n');
+  const csvContent = [
+    ['Student Name', 'Total Marks', 'Obtained Marks', 'Percentage', 'Grade', 'Evaluation Date'],
+    ...evaluations.map(evaluation => [
+      evaluation.student_name,
+      evaluation.total_marks.toString(),
+      evaluation.obtained_marks.toString(),
+      evaluation.percentage.toFixed(2),
+      evaluation.grade,
+      format(new Date(evaluation.created_at), 'yyyy-MM-dd HH:mm:ss'),
+    ])
+  ]
+    .map(row => row.join(','))
+    .join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);

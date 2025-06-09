@@ -1,3 +1,23 @@
+/*
+  # Updated Submission Dialog with File Upload
+
+  1. New Features
+    - File upload component integrated into submission form
+    - Files stored in submissions/{assignment_id}/{submission_id}/ folder
+    - Support for multiple file types and sizes
+    - Visual file preview and management
+
+  2. File Organization
+    - Each submission gets its own folder
+    - Files are organized by assignment ID and submission ID
+    - Easy to manage and retrieve submission files
+
+  3. Enhanced UI
+    - Better form layout with file upload section
+    - Improved file display in submission list
+    - Download functionality for submitted files
+*/
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -9,10 +29,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Calendar, Clock, User, FileText, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, User, FileText, CheckCircle, Download } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import FileUpload from './FileUpload';
+import { type UploadedFile } from '@/lib/storage';
 
 interface Assignment {
   id: string;
@@ -22,6 +44,7 @@ interface Assignment {
   due_date: string;
   points: number;
   created_by: string;
+  attachments: string[] | null;
   created_at: string;
 }
 
@@ -50,6 +73,7 @@ export default function SubmissionDialog({
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showSubmitForm, setShowSubmitForm] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
 
   useEffect(() => {
     if (open && assignment) {
@@ -83,7 +107,6 @@ export default function SubmissionDialog({
     const formData = new FormData(e.currentTarget);
     const studentName = formData.get('studentName') as string;
     const content = formData.get('content') as string;
-    const attachments = formData.get('attachments') as string;
 
     if (!studentName || !content) {
       toast.error('Please fill in all required fields');
@@ -92,28 +115,47 @@ export default function SubmissionDialog({
     }
 
     try {
-      const attachmentArray = attachments 
-        ? attachments.split(',').map(item => item.trim()).filter(Boolean)
-        : null;
-
       const dueDate = new Date(assignment.due_date);
       const now = new Date();
       const status = now > dueDate ? 'late' : 'submitted';
 
-      const { error } = await supabase
+      // First create the submission to get the ID
+      const { data: submission, error: submissionError } = await supabase
         .from('submissions')
         .insert({
           assignment_id: assignment.id,
           student_name: studentName,
           content,
-          attachments: attachmentArray,
-          status
-        });
+          status,
+          attachments: null // Will be updated after file processing
+        })
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (submissionError) throw submissionError;
 
-      toast.success('Submission created successfully!');
+      // Process uploaded files if any
+      let attachments = null;
+      if (uploadedFiles.length > 0) {
+        attachments = uploadedFiles.map(file => JSON.stringify({
+          name: file.name,
+          url: file.url,
+          size: file.size,
+          type: file.type
+        }));
+
+        // Update submission with attachments
+        const { error: updateError } = await supabase
+          .from('submissions')
+          .update({ attachments })
+          .eq('id', submission.id);
+
+        if (updateError) throw updateError;
+      }
+
+      toast.success('Assignment submitted successfully!');
       setShowSubmitForm(false);
+      setUploadedFiles([]);
       fetchSubmissions();
     } catch (error) {
       console.error('Error creating submission:', error);
@@ -123,10 +165,118 @@ export default function SubmissionDialog({
     }
   };
 
+  const renderAttachments = (attachments: string[] | null) => {
+    if (!attachments || attachments.length === 0) return null;
+
+    return (
+      <div className="space-y-2 mt-4">
+        <p className="text-sm font-medium text-gray-300">Submitted Files:</p>
+        {attachments.map((attachment, index) => {
+          try {
+            const fileData = JSON.parse(attachment);
+            return (
+              <div key={index} className="bg-slate-800/50 p-3 rounded-lg border border-slate-600 hover:bg-slate-700/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-xl">
+                      {fileData.type?.startsWith('image/') ? '🖼️' : 
+                       fileData.type?.includes('pdf') ? '📄' : 
+                       fileData.type?.includes('presentation') ? '📊' : 
+                       fileData.type?.includes('document') ? '📝' : '📎'}
+                    </span>
+                    <div>
+                      <p className="text-sm text-blue-300 font-medium">{fileData.name}</p>
+                      <p className="text-xs text-gray-400">
+                        {fileData.size ? `${Math.round(fileData.size / 1024)} KB` : 'Unknown size'}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.open(fileData.url, '_blank')}
+                    className="text-blue-400 hover:text-blue-300"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            );
+          } catch (e) {
+            // Fallback for old format
+            return (
+              <div key={index} className="bg-slate-800/50 p-3 rounded-lg border border-slate-600 hover:bg-slate-700/50 transition-colors">
+                <p className="text-sm text-blue-300">{attachment}</p>
+              </div>
+            );
+          }
+        })}
+      </div>
+    );
+  };
+
+  const renderAssignmentAttachments = (attachments: string[] | null) => {
+    if (!attachments || attachments.length === 0) return null;
+
+    return (
+      <div className="space-y-2 mt-4">
+        <p className="text-sm font-medium text-gray-300">Assignment Files:</p>
+        {attachments.map((attachment, index) => {
+          try {
+            const fileData = JSON.parse(attachment);
+            return (
+              <div key={index} className="bg-slate-800/50 p-3 rounded-lg border border-slate-600 hover:bg-slate-700/50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <span className="text-xl">
+                      {fileData.type?.startsWith('image/') ? '🖼️' : 
+                       fileData.type?.includes('pdf') ? '📄' : 
+                       fileData.type?.includes('presentation') ? '📊' : 
+                       fileData.type?.includes('document') ? '📝' : '📎'}
+                    </span>
+                    <div>
+                      <p className="text-sm text-blue-300 font-medium">{fileData.name}</p>
+                      <p className="text-xs text-gray-400">
+                        {fileData.size ? `${Math.round(fileData.size / 1024)} KB` : 'Unknown size'}
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => window.open(fileData.url, '_blank')}
+                    className="text-blue-400 hover:text-blue-300"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            );
+          } catch (e) {
+            // Fallback for old format
+            return (
+              <div key={index} className="bg-slate-800/50 p-3 rounded-lg border border-slate-600 hover:bg-slate-700/50 transition-colors">
+                <p className="text-sm text-blue-300">{attachment}</p>
+              </div>
+            );
+          }
+        })}
+      </div>
+    );
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    if (!open) {
+      setShowSubmitForm(false);
+      setUploadedFiles([]);
+    }
+    onOpenChange(open);
+  };
+
   const isOverdue = new Date() > new Date(assignment.due_date);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="bg-slate-900/95 border-slate-700 max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-white text-xl">{assignment.title}</DialogTitle>
@@ -165,6 +315,7 @@ export default function SubmissionDialog({
                   Overdue
                 </Badge>
               )}
+              {renderAssignmentAttachments(assignment.attachments)}
             </CardContent>
           </Card>
 
@@ -186,7 +337,7 @@ export default function SubmissionDialog({
                 <CardTitle className="text-white">Submit Your Work</CardTitle>
               </CardHeader>
               <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-6">
                   <div>
                     <Label htmlFor="studentName" className="text-white">Your Name</Label>
                     <Input
@@ -208,18 +359,18 @@ export default function SubmissionDialog({
                       className="bg-slate-800 border-slate-600 text-white"
                     />
                   </div>
+                  
+                  {/* File Upload Section */}
                   <div>
-                    <Label htmlFor="attachments" className="text-white">Attachments (Optional)</Label>
-                    <Input
-                      id="attachments"
-                      name="attachments"
-                      placeholder="Enter file names/URLs separated by commas"
-                      className="bg-slate-800 border-slate-600 text-white"
+                    <Label className="text-white mb-3 block">Submission Files</Label>
+                    <FileUpload
+                      onFilesChange={setUploadedFiles}
+                      initialFiles={uploadedFiles}
+                      maxFiles={10}
+                      folder={`submissions/${assignment.id}`}
                     />
-                    <p className="text-xs text-gray-400 mt-1">
-                      Separate multiple attachments with commas
-                    </p>
                   </div>
+
                   <div className="flex gap-3">
                     <Button
                       type="button"
@@ -287,16 +438,7 @@ export default function SubmissionDialog({
                         </Badge>
                       </div>
                       <p className="text-gray-300 mb-3">{submission.content}</p>
-                      {submission.attachments && submission.attachments.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-sm font-medium text-gray-300">Attachments:</p>
-                          {submission.attachments.map((attachment, index) => (
-                            <div key={index} className="bg-slate-700/50 p-2 rounded border border-slate-600">
-                              <p className="text-sm text-blue-300">{attachment}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                      {renderAttachments(submission.attachments)}
                     </div>
                   ))}
                 </div>

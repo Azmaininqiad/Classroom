@@ -1,16 +1,16 @@
 /*
-  # Updated Submission Dialog with Evaluation Features
+  # Updated Submission Dialog with AI Evaluation Features
 
   1. New Features
     - Answer Key button for teachers
-    - Single Evaluation button for individual submissions
-    - Multiple Evaluation button for batch processing
+    - AI Single Evaluation button for individual submissions
+    - AI Multiple Evaluation button for batch processing
     - Results button to view all evaluations
 
   2. Enhanced UI
     - Better organization of submission management
-    - Evaluation action buttons in submission cards
-    - Integration with new evaluation dialogs
+    - AI evaluation action buttons in submission cards
+    - Integration with new AI evaluation dialog
 */
 
 'use client';
@@ -24,7 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Calendar, Clock, User, FileText, CheckCircle, Download, Key, GraduationCap, BarChart3, Users } from 'lucide-react';
+import { Calendar, Clock, User, FileText, CheckCircle, Download, Key, GraduationCap, BarChart3, Users, Brain, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -32,6 +32,7 @@ import FileUpload from './FileUpload';
 import AnswerKeyDialog from './AnswerKeyDialog';
 import EvaluationDialog from './EvaluationDialog';
 import ResultsDialog from './ResultsDialog';
+import AIEvaluationDialog from './AIEvaluationDialog';
 import { type UploadedFile } from '@/lib/storage';
 
 interface Assignment {
@@ -77,6 +78,7 @@ export default function SubmissionDialog({
   const [answerKeyOpen, setAnswerKeyOpen] = useState(false);
   const [evaluationOpen, setEvaluationOpen] = useState(false);
   const [resultsOpen, setResultsOpen] = useState(false);
+  const [aiEvaluationOpen, setAiEvaluationOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [evaluationType, setEvaluationType] = useState<'single' | 'multiple'>('single');
 
@@ -182,9 +184,24 @@ export default function SubmissionDialog({
     setEvaluationOpen(true);
   };
 
+  const handleAISingleEvaluation = () => {
+    setEvaluationType('single');
+    setAiEvaluationOpen(true);
+  };
+
+  const handleAIMultipleEvaluation = () => {
+    setEvaluationType('multiple');
+    setAiEvaluationOpen(true);
+  };
+
   const handleEvaluationCreated = () => {
     setEvaluationOpen(false);
     setSelectedSubmission(null);
+    fetchSubmissions();
+  };
+
+  const handleAIEvaluationComplete = () => {
+    setAiEvaluationOpen(false);
     fetchSubmissions();
   };
 
@@ -319,7 +336,7 @@ export default function SubmissionDialog({
                     Assignment Details
                   </CardTitle>
                   {/* Teacher Actions */}
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button
                       onClick={() => setAnswerKeyOpen(true)}
                       variant="outline"
@@ -330,10 +347,28 @@ export default function SubmissionDialog({
                       Answer Key
                     </Button>
                     <Button
-                      onClick={() => setResultsOpen(true)}
+                      onClick={handleAISingleEvaluation}
                       variant="outline"
                       size="sm"
                       className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
+                    >
+                      <Brain className="h-4 w-4 mr-1" />
+                      AI Single
+                    </Button>
+                    <Button
+                      onClick={handleAIMultipleEvaluation}
+                      variant="outline"
+                      size="sm"
+                      className="border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
+                    >
+                      <Sparkles className="h-4 w-4 mr-1" />
+                      AI Batch
+                    </Button>
+                    <Button
+                      onClick={() => setResultsOpen(true)}
+                      variant="outline"
+                      size="sm"
+                      className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
                     >
                       <BarChart3 className="h-4 w-4 mr-1" />
                       Results
@@ -456,7 +491,7 @@ export default function SubmissionDialog({
                         className="border-blue-500/50 text-blue-400 hover:bg-blue-500/10"
                       >
                         <Users className="h-4 w-4 mr-1" />
-                        Multiple Evaluation
+                        Manual Batch
                       </Button>
                     )}
                     <Button
@@ -506,7 +541,7 @@ export default function SubmissionDialog({
                               className="border-green-500/50 text-green-400 hover:bg-green-500/10"
                             >
                               <GraduationCap className="h-4 w-4 mr-1" />
-                              Evaluate
+                              Manual
                             </Button>
                           </div>
                         </div>
@@ -530,13 +565,23 @@ export default function SubmissionDialog({
         assignmentTitle={assignment.title}
       />
 
-      {/* Evaluation Dialog */}
+      {/* Manual Evaluation Dialog */}
       <EvaluationDialog
         open={evaluationOpen}
         onOpenChange={setEvaluationOpen}
         submission={selectedSubmission}
         evaluationType={evaluationType}
         onEvaluationCreated={handleEvaluationCreated}
+      />
+
+      {/* AI Evaluation Dialog */}
+      <AIEvaluationDialog
+        open={aiEvaluationOpen}
+        onOpenChange={setAiEvaluationOpen}
+        assignmentId={assignment.id}
+        assignmentTitle={assignment.title}
+        evaluationType={evaluationType}
+        onEvaluationComplete={handleAIEvaluationComplete}
       />
 
       {/* Results Dialog */}

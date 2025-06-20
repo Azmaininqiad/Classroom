@@ -221,10 +221,9 @@ async def save_evaluation_result(evaluation_data: Dict[str, Any], student_name: 
     
     # Save to Supabase
     try:
-        supabase.table('evaluations').insert({
+        supabase.table('evaluation_results').insert({
             'id': result_id,
             'assignment_id': assignment_id,
-            'submission_id': str(uuid.uuid4()),
             'student_name': student_name,
             'total_marks': result.total_marks,
             'obtained_marks': result.obtained_marks,
@@ -236,7 +235,7 @@ async def save_evaluation_result(evaluation_data: Dict[str, Any], student_name: 
             'strengths': result.strengths,
             'areas_for_improvement': result.areas_for_improvement,
             'detailed_feedback': result.detailed_feedback,
-            'created_at': timestamp,
+            'timestamp': timestamp,
             'evaluation_type': evaluation_type
         }).execute()
         
@@ -381,7 +380,7 @@ async def health_check():
 async def get_evaluations(assignment_id: str):
     """Get all evaluations for a specific assignment."""
     try:
-        response = supabase.table('evaluations').select("*").eq('assignment_id', assignment_id).execute()
+        response = supabase.table('evaluation_results').select("*").eq('assignment_id', assignment_id).execute()
         return {"success": True, "data": response.data}
     except Exception as e:
         logger.error(f"Failed to fetch evaluations: {str(e)}")

@@ -6,11 +6,13 @@
     - AI Single Evaluation button for individual submissions
     - AI Multiple Evaluation button for batch processing
     - Results button to view all evaluations
+    - AI Results button to view AI evaluation results
 
   2. Enhanced UI
     - Better organization of submission management
     - AI evaluation action buttons in submission cards
     - Integration with new AI evaluation dialog
+    - AI Results dialog for detailed evaluation results
 */
 
 'use client';
@@ -24,7 +26,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Calendar, Clock, User, FileText, CheckCircle, Download, Key, GraduationCap, BarChart3, Users, Brain, Sparkles } from 'lucide-react';
+import { Calendar, Clock, User, FileText, CheckCircle, Download, Key, GraduationCap, BarChart3, Users, Brain, Sparkles, Zap } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -33,6 +35,7 @@ import AnswerKeyDialog from './AnswerKeyDialog';
 import EvaluationDialog from './EvaluationDialog';
 import ResultsDialog from './ResultsDialog';
 import AIEvaluationDialog from './AIEvaluationDialog';
+import AIResultsDialog from './AIResultsDialog';
 import { type UploadedFile } from '@/lib/storage';
 
 interface Assignment {
@@ -79,6 +82,7 @@ export default function SubmissionDialog({
   const [evaluationOpen, setEvaluationOpen] = useState(false);
   const [resultsOpen, setResultsOpen] = useState(false);
   const [aiEvaluationOpen, setAiEvaluationOpen] = useState(false);
+  const [aiResultsOpen, setAiResultsOpen] = useState(false);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [evaluationType, setEvaluationType] = useState<'single' | 'multiple'>('single');
 
@@ -204,6 +208,7 @@ export default function SubmissionDialog({
     setAiEvaluationOpen(false);
     fetchSubmissions();
   };
+  
 
   const renderAttachments = (attachments: string[] | null) => {
     if (!attachments || attachments.length === 0) return null;
@@ -372,6 +377,15 @@ export default function SubmissionDialog({
                     >
                       <BarChart3 className="h-4 w-4 mr-1" />
                       Results
+                    </Button>
+                    <Button
+                      onClick={() => setAiResultsOpen(true)}
+                      variant="outline"
+                      size="sm"
+                      className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10"
+                    >
+                      <Zap className="h-4 w-4 mr-1" />
+                      AI Results
                     </Button>
                   </div>
                 </div>
@@ -588,6 +602,14 @@ export default function SubmissionDialog({
       <ResultsDialog
         open={resultsOpen}
         onOpenChange={setResultsOpen}
+        assignmentId={assignment.id}
+        assignmentTitle={assignment.title}
+      />
+
+      {/* AI Results Dialog */}
+      <AIResultsDialog
+        open={aiResultsOpen}
+        onOpenChange={setAiResultsOpen}
         assignmentId={assignment.id}
         assignmentTitle={assignment.title}
       />

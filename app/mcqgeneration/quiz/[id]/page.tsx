@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, CheckCircle, XCircle, RotateCcw, Home } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, RotateCcw, Home, Clock, Award, Target } from 'lucide-react';
 import Link from 'next/link';
 
 const API_BASE_URL = 'http://localhost:8001';
@@ -114,14 +114,28 @@ export default function QuizPage() {
     setShowResults(false);
   };
 
+  const getScoreColor = (percentage: number) => {
+    if (percentage >= 90) return 'text-emerald-400';
+    if (percentage >= 70) return 'text-blue-400';
+    if (percentage >= 50) return 'text-yellow-400';
+    return 'text-red-400';
+  };
+
+  const getScoreIcon = (percentage: number) => {
+    if (percentage >= 90) return <Award className="w-8 h-8 text-emerald-400" />;
+    if (percentage >= 70) return <Target className="w-8 h-8 text-blue-400" />;
+    return <Clock className="w-8 h-8 text-yellow-400" />;
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen">
-        <div className="container">
-          <div className="loading">
-            <div className="spinner"></div>
-            <p className="text-muted-foreground">Loading quiz...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-purple-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative">
+            <div className="w-20 h-20 border-4 border-blue-500/20 rounded-full animate-spin border-t-blue-500 mx-auto mb-4"></div>
+            <div className="absolute inset-0 w-20 h-20 border-4 border-purple-500/20 rounded-full animate-ping mx-auto"></div>
           </div>
+          <p className="text-slate-300 text-lg font-medium">Loading your quiz...</p>
         </div>
       </div>
     );
@@ -129,57 +143,74 @@ export default function QuizPage() {
 
   if (!quiz) {
     return (
-      <div className="min-h-screen">
-        <div className="container">
-          <div className="card text-center">
-            <h2 className="text-2xl font-semibold mb-4">Quiz not found</h2>
-            <Link href="/mcqgeneration">
-              <button className="btn btn-primary">
-                Back to MCQ Generator
-              </button>
-            </Link>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-purple-900 flex items-center justify-center p-4">
+        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 text-center max-w-md w-full">
+          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+            <XCircle className="w-8 h-8 text-red-400" />
           </div>
+          <h2 className="text-2xl font-bold text-white mb-4">Quiz Not Found</h2>
+          <p className="text-slate-300 mb-6">The quiz you're looking for doesn't exist or has been removed.</p>
+          <Link href="/mcqgeneration">
+            <button className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105">
+              Back to MCQ Generator
+            </button>
+          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      <div className="container">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-purple-900">
+      <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
         {/* Header */}
-        <div className="card">
-          <div className="flex flex-wrap gap-4 justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              {quiz.title}
-            </h1>
+        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 sm:p-8 mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+                {quiz.title}
+              </h1>
+              <div className="flex items-center gap-4 text-slate-300">
+                <div className="flex items-center gap-2">
+                  <Target className="w-4 h-4" />
+                  <span>{quiz.total_questions} Questions</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  <span>Created {new Date(quiz.created_at).toLocaleDateString()}</span>
+                </div>
+              </div>
+            </div>
             <div className="flex gap-2">
               <Link href="/">
-                <button className="btn btn-secondary flex items-center gap-2">
+                <button className="bg-slate-700/50 hover:bg-slate-600/50 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 flex items-center gap-2 border border-slate-600/50">
                   <Home className="w-4 h-4" />
                   Home
                 </button>
               </Link>
               <Link href="/mcqgeneration">
-                <button className="btn btn-secondary flex items-center gap-2">
+                <button className="bg-slate-700/50 hover:bg-slate-600/50 text-white font-medium py-2 px-4 rounded-lg transition-all duration-300 flex items-center gap-2 border border-slate-600/50">
                   <ArrowLeft className="w-4 h-4" />
                   Back
                 </button>
               </Link>
             </div>
           </div>
-          
-          <p className="text-muted-foreground mb-4">
-            Total Questions: {quiz.total_questions}
-          </p>
 
           {showResults && results && (
-            <div className="score-summary">
-              <h2 className="text-2xl font-bold mb-2">Quiz Results</h2>
-              <div className="score-number">{results.score}/{results.total_questions}</div>
-              <p className="text-lg mb-4">{results.percentage}% Score</p>
+            <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm border border-blue-500/30 rounded-xl p-6 text-center">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                {getScoreIcon(results.percentage)}
+                <h2 className="text-2xl font-bold text-white">Quiz Complete!</h2>
+              </div>
+              <div className={`text-5xl font-bold mb-2 ${getScoreColor(results.percentage)}`}>
+                {results.score}/{results.total_questions}
+              </div>
+              <p className={`text-2xl font-semibold mb-6 ${getScoreColor(results.percentage)}`}>
+                {results.percentage}% Score
+              </p>
               <button 
-                className="btn btn-secondary flex items-center gap-2 mx-auto"
+                className="bg-gradient-to-r from-emerald-500 to-blue-600 hover:from-emerald-600 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 flex items-center gap-2 mx-auto"
                 onClick={resetQuiz}
               >
                 <RotateCcw className="w-4 h-4" />
@@ -189,79 +220,139 @@ export default function QuizPage() {
           )}
         </div>
 
-        {/* Questions */}
-        {questions.map((question) => (
-          <div key={question.id} className="question-card">
-            <div className="question-number">
-              Question {question.question_number}
+        {/* Progress Bar */}
+        {!showResults && (
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 mb-6">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-slate-300 font-medium">Progress</span>
+              <span className="text-slate-300 font-medium">
+                {Object.keys(answers).length} / {questions.length}
+              </span>
             </div>
-            
-            <div className="question-text">
-              {question.question_text}
+            <div className="w-full bg-slate-700/50 rounded-full h-2">
+              <div 
+                className="bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full transition-all duration-500"
+                style={{ width: `${(Object.keys(answers).length / questions.length) * 100}%` }}
+              ></div>
             </div>
-
-            <div className="options">
-              {Object.entries(question.options).map(([optionKey, optionText]) => {
-                const isSelected = answers[question.id] === optionKey;
-                const isCorrect = showResults && optionKey === question.correct_answer;
-                const isIncorrect = showResults && isSelected && optionKey !== question.correct_answer;
-                
-                let className = 'option';
-                if (showResults) {
-                  if (isCorrect) className += ' correct';
-                  else if (isIncorrect) className += ' incorrect';
-                } else if (isSelected) {
-                  className += ' selected';
-                }
-
-                return (
-                  <label key={optionKey} className={className}>
-                    <input
-                      type="radio"
-                      name={`question-${question.id}`}
-                      value={optionKey}
-                      checked={isSelected}
-                      onChange={() => handleAnswerChange(question.id, optionKey)}
-                      disabled={showResults}
-                    />
-                    <div className="flex items-center gap-2">
-                      <strong>{optionKey}:</strong> {optionText}
-                      {showResults && isCorrect && <CheckCircle className="w-4 h-4 text-green-400" />}
-                      {showResults && isIncorrect && <XCircle className="w-4 h-4 text-red-400" />}
-                    </div>
-                  </label>
-                );
-              })}
-            </div>
-
-            {showResults && question.explanation && (
-              <div className="explanation">
-                <strong>Explanation:</strong> {question.explanation}
-              </div>
-            )}
           </div>
-        ))}
+        )}
+
+        {/* Questions */}
+        <div className="space-y-6">
+          {questions.map((question, index) => (
+            <div key={question.id} className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-6 hover:bg-white/15 transition-all duration-300">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                  {question.question_number}
+                </div>
+                <span className="text-slate-400 font-medium">Question {question.question_number}</span>
+              </div>
+              
+              <div className="text-white text-lg font-medium mb-6 leading-relaxed">
+                {question.question_text}
+              </div>
+
+              <div className="space-y-3">
+                {Object.entries(question.options).map(([optionKey, optionText]) => {
+                  const isSelected = answers[question.id] === optionKey;
+                  const isCorrect = showResults && optionKey === question.correct_answer;
+                  const isIncorrect = showResults && isSelected && optionKey !== question.correct_answer;
+                  
+                  let className = 'group flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 cursor-pointer';
+                  
+                  if (showResults) {
+                    if (isCorrect) {
+                      className += ' bg-emerald-500/20 border-emerald-500/50 text-emerald-100';
+                    } else if (isIncorrect) {
+                      className += ' bg-red-500/20 border-red-500/50 text-red-100';
+                    } else {
+                      className += ' bg-slate-700/30 border-slate-600/30 text-slate-300';
+                    }
+                  } else if (isSelected) {
+                    className += ' bg-blue-500/20 border-blue-500/50 text-blue-100 transform scale-[1.02]';
+                  } else {
+                    className += ' bg-slate-700/30 border-slate-600/30 text-slate-300 hover:bg-slate-600/30 hover:border-slate-500/50 hover:text-white';
+                  }
+
+                  return (
+                    <label key={optionKey} className={className}>
+                      <input
+                        type="radio"
+                        name={`question-${question.id}`}
+                        value={optionKey}
+                        checked={isSelected}
+                        onChange={() => handleAnswerChange(question.id, optionKey)}
+                        disabled={showResults}
+                        className="sr-only"
+                      />
+                      <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+                        isSelected 
+                          ? 'border-blue-500 bg-blue-500' 
+                          : 'border-slate-500 group-hover:border-slate-400'
+                      }`}>
+                        {isSelected && <div className="w-2 h-2 bg-white rounded-full"></div>}
+                      </div>
+                      <div className="flex-1 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-blue-400">{optionKey}:</span>
+                          <span>{optionText}</span>
+                        </div>
+                        {showResults && isCorrect && <CheckCircle className="w-5 h-5 text-emerald-400" />}
+                        {showResults && isIncorrect && <XCircle className="w-5 h-5 text-red-400" />}
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+
+              {showResults && question.explanation && (
+                <div className="mt-6 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+                  <div className="flex items-start gap-2">
+                    <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center mt-0.5">
+                      <span className="text-white text-xs font-bold">!</span>
+                    </div>
+                    <div>
+                      <span className="font-semibold text-blue-400">Explanation:</span>
+                      <p className="text-slate-300 mt-1">{question.explanation}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
 
         {/* Submit Button */}
         {!showResults && (
-          <div className="card text-center">
+          <div className="mt-8 text-center">
             <button
-              className="btn btn-primary text-lg px-8 py-4 flex items-center justify-center gap-2 mx-auto"
+              className={`bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold py-4 px-8 rounded-xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-3 mx-auto text-lg ${
+                submitting || Object.keys(answers).length < questions.length
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'shadow-lg hover:shadow-xl'
+              }`}
               onClick={handleSubmit}
               disabled={submitting || Object.keys(answers).length < questions.length}
             >
               {submitting ? (
                 <>
-                  <div className="spinner w-5 h-5"></div>
-                  Submitting...
+                  <div className="w-6 h-6 border-2 border-white/30 rounded-full animate-spin border-t-white"></div>
+                  Submitting Quiz...
                 </>
               ) : (
-                'Submit Quiz'
+                <>
+                  <CheckCircle className="w-6 h-6" />
+                  Submit Quiz
+                </>
               )}
             </button>
             
-            <p className="mt-4 text-muted-foreground">
-              Answered: {Object.keys(answers).length} / {questions.length}
+            <p className="mt-4 text-slate-400">
+              {Object.keys(answers).length < questions.length 
+                ? `Please answer ${questions.length - Object.keys(answers).length} more question${questions.length - Object.keys(answers).length === 1 ? '' : 's'}`
+                : 'All questions answered! Ready to submit.'
+              }
             </p>
           </div>
         )}

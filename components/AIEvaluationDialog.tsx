@@ -131,7 +131,7 @@ export default function AIEvaluationDialog({
         setCurrentStep('AI is analyzing the submission...');
         setProgress(50);
 
-        const response = await fetch('http://localhost:8000/evaluate/single', {
+        const response = await fetch('http://localhost:8000/api/evaluate/single', {
           method: 'POST',
           body: formData,
         });
@@ -164,7 +164,7 @@ export default function AIEvaluationDialog({
         setCurrentStep('AI is analyzing all submissions...');
         setProgress(30);
 
-        const response = await fetch('http://localhost:8000/evaluate/multiple', {
+        const response = await fetch('http://localhost:8000/api/evaluate/multiple', {
           method: 'POST',
           body: formData,
         });
@@ -308,7 +308,7 @@ export default function AIEvaluationDialog({
                       htmlFor="student-files-upload"
                       className="cursor-pointer text-blue-400 hover:text-blue-300"
                     >
-                      Click to upload student response{evaluationType === 'multiple' ? 's' : ''}
+                      Click to upload student123 response{evaluationType === 'multiple' ? 's' : ''}
                     </label>
                     <p className="text-sm text-gray-400 mt-2">
                       {evaluationType === 'single' 

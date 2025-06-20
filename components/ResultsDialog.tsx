@@ -17,14 +17,11 @@ import {
   Award,
   FileText,
   Calendar,
-  Download,
-  Brain,
-  GraduationCap
+  Download
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { aiEvaluationAPI, type AIEvaluationResult } from '@/lib/ai-evaluation';
 
 interface Evaluation {
   id: string;
@@ -59,10 +56,8 @@ export default function ResultsDialog({
   assignmentId,
   assignmentTitle
 }: ResultsDialogProps) {
-  const [manualEvaluations, setManualEvaluations] = useState<Evaluation[]>([]);
-  const [aiEvaluations, setAiEvaluations] = useState<AIEvaluationResult[]>([]);
+  const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('manual');
   const [stats, setStats] = useState({
     totalEvaluations: 0,
     averageScore: 0,
@@ -73,39 +68,23 @@ export default function ResultsDialog({
 
   useEffect(() => {
     if (open) {
-      fetchAllEvaluations();
+      fetchEvaluations();
     }
   }, [open, assignmentId]);
 
-  const fetchAllEvaluations = async () => {
+  const fetchEvaluations = async () => {
     setLoading(true);
     try {
-      // Fetch manual evaluations from Supabase
-      const { data: manualData, error: manualError } = await supabase
+      const { data, error } = await supabase
         .from('evaluations')
         .select('*')
         .eq('assignment_id', assignmentId)
         .order('created_at', { ascending: false });
 
-      if (manualError) throw manualError;
-      setManualEvaluations(manualData || []);
+      if (error) throw error;
 
-      // Fetch AI evaluations from FastAPI backend
-      try {
-        const aiData = await aiEvaluationAPI.getEvaluationsByAssignment(assignmentId);
-        setAiEvaluations(aiData || []);
-      } catch (aiError) {
-        console.warn('AI evaluations not available:', aiError);
-        setAiEvaluations([]);
-      }
-
-      // Calculate combined stats
-      const allEvaluations = [
-        ...(manualData || []).map(e => ({ percentage: e.percentage, grade: e.grade })),
-        ...(aiData || []).map(e => ({ percentage: e.percentage, grade: e.grade }))
-      ];
-
-      calculateStats(allEvaluations);
+      setEvaluations(data || []);
+      calculateStats(data || []);
     } catch (error) {
       console.error('Error fetching evaluations:', error);
       toast.error('Failed to load evaluation results');
@@ -114,7 +93,7 @@ export default function ResultsDialog({
     }
   };
 
-  const calculateStats = (evaluations: Array<{ percentage: number; grade: string }>) => {
+  const calculateStats = (evaluations: Evaluation[]) => {
     if (evaluations.length === 0) {
       setStats({
         totalEvaluations: 0,
@@ -169,123 +148,28 @@ export default function ResultsDialog({
   };
 
   const exportResults = () => {
-    const allEvaluations = [
-      ...manualEvaluations.map(e => ({ ...e, source: 'Manual' })),
-      ...aiEvaluations.map(e => ({ ...e, source: 'AI', created_at: e.timestamp }))
-    ];
-
-    const csvContent = [
-      ['Student Name', 'Total Marks', 'Obtained Marks', 'Percentage', 'Grade', 'Source', 'Evaluation Date'],
-      ...allEvaluations.map(evaluation => [
-        evaluation.student_name,
-        evaluation.total_marks.toString(),
-        evaluation.obtained_marks.toString(),
-        evaluation.percentage.toFixed(2),
-        evaluation.grade,
-        evaluation.source,
-        format(new Date(evaluation.created_at), 'yyyy-MM-dd HH:mm:ss'),
-      ])
-    ]
-      .map(row => row.join(','))
-      .join('\n');
+  const csvContent = [
+    ['Student Name', 'Total Marks', 'Obtained Marks', 'Percentage', 'Grade', 'Evaluation Date'],
+    ...evaluations.map(evaluation => [
+      evaluation.student_name,
+      evaluation.total_marks.toString(),
+      evaluation.obtained_marks.toString(),
+      evaluation.percentage.toFixed(2),
+      evaluation.grade,
+      format(new Date(evaluation.created_at), 'yyyy-MM-dd HH:mm:ss'),
+    ])
+  ]
+    .map(row => row.join(','))
+    .join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${assignmentTitle}_all_results.csv`;
+    a.download = `${assignmentTitle}_results.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
   };
-
-  const renderEvaluationCard = (evaluation: any, isAI: boolean = false) => (
-    <Card key={evaluation.id} className="glass-effect">
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Avatar>
-              <AvatarFallback className="bg-blue-600 text-white">
-                {evaluation.student_name.charAt(0).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h3 className="text-white font-semibold flex items-center">
-                {evaluation.student_name}
-                {isAI && <Brain className="h-4 w-4 ml-2 text-purple-400" />}
-                {!isAI && <GraduationCap className="h-4 w-4 ml-2 text-green-400" />}
-              </h3>
-              <p className="text-sm text-gray-400">
-                {format(new Date(isAI ? evaluation.timestamp : evaluation.created_at), 'MMM d, yyyy at h:mm a')}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3">
-            <Badge className={`${getGradeColor(evaluation.grade)} border`}>
-              {evaluation.grade}
-            </Badge>
-            <div className="text-right">
-              <div className={`text-xl font-bold ${getPerformanceColor(evaluation.percentage)}`}>
-                {evaluation.percentage.toFixed(1)}%
-              </div>
-              <div className="text-sm text-gray-400">
-                {evaluation.obtained_marks}/{evaluation.total_marks}
-              </div>
-            </div>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {evaluation.correct_answers && evaluation.correct_answers.length > 0 && (
-            <div>
-              <h4 className="text-green-400 font-medium flex items-center mb-2">
-                <CheckCircle className="h-4 w-4 mr-1" />
-                Correct Answers
-              </h4>
-              <div className="space-y-1">
-                {evaluation.correct_answers.slice(0, 2).map((answer: string, index: number) => (
-                  <Badge key={index} variant="outline" className="border-green-500/30 text-green-300 mr-1 mb-1 text-xs">
-                    {answer}
-                  </Badge>
-                ))}
-                {evaluation.correct_answers.length > 2 && (
-                  <span className="text-xs text-gray-400">+{evaluation.correct_answers.length - 2} more</span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {evaluation.incorrect_answers && evaluation.incorrect_answers.length > 0 && (
-            <div>
-              <h4 className="text-red-400 font-medium flex items-center mb-2">
-                <AlertCircle className="h-4 w-4 mr-1" />
-                Incorrect Answers
-              </h4>
-              <div className="space-y-1">
-                {evaluation.incorrect_answers.slice(0, 2).map((answer: string, index: number) => (
-                  <Badge key={index} variant="outline" className="border-red-500/30 text-red-300 mr-1 mb-1 text-xs">
-                    {answer}
-                  </Badge>
-                ))}
-                {evaluation.incorrect_answers.length > 2 && (
-                  <span className="text-xs text-gray-400">+{evaluation.incorrect_answers.length - 2} more</span>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {evaluation.detailed_feedback && (
-          <div>
-            <h4 className="text-white font-medium mb-2">Feedback</h4>
-            <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-600">
-              <p className="text-gray-300 text-sm line-clamp-3">{evaluation.detailed_feedback}</p>
-            </div>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -295,13 +179,13 @@ export default function ResultsDialog({
             <div>
               <DialogTitle className="text-white flex items-center">
                 <BarChart3 className="h-5 w-5 mr-2" />
-                All Evaluation Results - {assignmentTitle}
+                Evaluation Results - {assignmentTitle}
               </DialogTitle>
               <DialogDescription>
-                View and analyze both manual and AI evaluation results
+                View and analyze student evaluation results
               </DialogDescription>
             </div>
-            {(manualEvaluations.length > 0 || aiEvaluations.length > 0) && (
+            {evaluations.length > 0 && (
               <Button
                 onClick={exportResults}
                 variant="outline"
@@ -320,7 +204,7 @@ export default function ResultsDialog({
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
               <p className="text-gray-300 mt-4">Loading evaluation results...</p>
             </div>
-          ) : (manualEvaluations.length === 0 && aiEvaluations.length === 0) ? (
+          ) : evaluations.length === 0 ? (
             <Card className="glass-effect">
               <CardContent className="text-center py-12">
                 <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
@@ -329,120 +213,260 @@ export default function ResultsDialog({
               </CardContent>
             </Card>
           ) : (
-            <>
-              {/* Overview Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="glass-effect">
-                  <CardContent className="p-6 text-center">
-                    <div className="text-2xl font-bold text-blue-400">{stats.totalEvaluations}</div>
-                    <div className="text-sm text-gray-400">Total Evaluations</div>
-                  </CardContent>
-                </Card>
-                <Card className="glass-effect">
-                  <CardContent className="p-6 text-center">
-                    <div className={`text-2xl font-bold ${getPerformanceColor(stats.averageScore)}`}>
-                      {stats.averageScore.toFixed(1)}%
-                    </div>
-                    <div className="text-sm text-gray-400">Average Score</div>
-                  </CardContent>
-                </Card>
-                <Card className="glass-effect">
-                  <CardContent className="p-6 text-center">
-                    <div className="text-2xl font-bold text-green-400">{stats.highestScore.toFixed(1)}%</div>
-                    <div className="text-sm text-gray-400">Highest Score</div>
-                  </CardContent>
-                </Card>
-                <Card className="glass-effect">
-                  <CardContent className="p-6 text-center">
-                    <div className="text-2xl font-bold text-red-400">{stats.lowestScore.toFixed(1)}%</div>
-                    <div className="text-sm text-gray-400">Lowest Score</div>
-                  </CardContent>
-                </Card>
-              </div>
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList className="grid w-full grid-cols-3 bg-slate-800">
+                <TabsTrigger value="overview" className="data-[state=active]:bg-blue-600">
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger value="individual" className="data-[state=active]:bg-blue-600">
+                  Individual Results
+                </TabsTrigger>
+                <TabsTrigger value="analytics" className="data-[state=active]:bg-blue-600">
+                  Analytics
+                </TabsTrigger>
+              </TabsList>
 
-              {/* Grade Distribution */}
-              <Card className="glass-effect">
-                <CardHeader>
-                  <CardTitle className="text-white">Grade Distribution</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-                    {Object.entries(stats.gradeDistribution).map(([grade, count]) => (
-                      <div key={grade} className="text-center">
-                        <Badge className={`${getGradeColor(grade)} border mb-2`}>
-                          {grade}
-                        </Badge>
-                        <div className="text-xl font-bold text-white">{count}</div>
-                        <div className="text-xs text-gray-400">
-                          {((count / stats.totalEvaluations) * 100).toFixed(1)}%
+              <TabsContent value="overview" className="mt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                  <Card className="glass-effect">
+                    <CardContent className="p-6 text-center">
+                      <div className="text-2xl font-bold text-blue-400">{stats.totalEvaluations}</div>
+                      <div className="text-sm text-gray-400">Total Evaluations</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="glass-effect">
+                    <CardContent className="p-6 text-center">
+                      <div className={`text-2xl font-bold ${getPerformanceColor(stats.averageScore)}`}>
+                        {stats.averageScore.toFixed(1)}%
+                      </div>
+                      <div className="text-sm text-gray-400">Average Score</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="glass-effect">
+                    <CardContent className="p-6 text-center">
+                      <div className="text-2xl font-bold text-green-400">{stats.highestScore.toFixed(1)}%</div>
+                      <div className="text-sm text-gray-400">Highest Score</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="glass-effect">
+                    <CardContent className="p-6 text-center">
+                      <div className="text-2xl font-bold text-red-400">{stats.lowestScore.toFixed(1)}%</div>
+                      <div className="text-sm text-gray-400">Lowest Score</div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Grade Distribution */}
+                <Card className="glass-effect">
+                  <CardHeader>
+                    <CardTitle className="text-white">Grade Distribution</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                      {Object.entries(stats.gradeDistribution).map(([grade, count]) => (
+                        <div key={grade} className="text-center">
+                          <Badge className={`${getGradeColor(grade)} border mb-2`}>
+                            {grade}
+                          </Badge>
+                          <div className="text-xl font-bold text-white">{count}</div>
+                          <div className="text-xs text-gray-400">
+                            {((count / stats.totalEvaluations) * 100).toFixed(1)}%
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="individual" className="mt-6">
+                <div className="space-y-4">
+                  {evaluations.map((evaluation) => (
+                    <Card key={evaluation.id} className="glass-effect">
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <Avatar>
+                              <AvatarFallback className="bg-blue-600 text-white">
+                                {evaluation.student_name.charAt(0).toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <h3 className="text-white font-semibold">{evaluation.student_name}</h3>
+                              <p className="text-sm text-gray-400">
+                                {format(new Date(evaluation.created_at), 'MMM d, yyyy at h:mm a')}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-3">
+                            <Badge className={`${getGradeColor(evaluation.grade)} border`}>
+                              {evaluation.grade}
+                            </Badge>
+                            <div className="text-right">
+                              <div className={`text-xl font-bold ${getPerformanceColor(evaluation.percentage)}`}>
+                                {evaluation.percentage.toFixed(1)}%
+                              </div>
+                              <div className="text-sm text-gray-400">
+                                {evaluation.obtained_marks}/{evaluation.total_marks}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {evaluation.correct_answers && evaluation.correct_answers.length > 0 && (
+                            <div>
+                              <h4 className="text-green-400 font-medium flex items-center mb-2">
+                                <CheckCircle className="h-4 w-4 mr-1" />
+                                Correct Answers
+                              </h4>
+                              <div className="space-y-1">
+                                {evaluation.correct_answers.map((answer, index) => (
+                                  <Badge key={index} variant="outline" className="border-green-500/30 text-green-300 mr-1 mb-1">
+                                    {answer}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {evaluation.incorrect_answers && evaluation.incorrect_answers.length > 0 && (
+                            <div>
+                              <h4 className="text-red-400 font-medium flex items-center mb-2">
+                                <AlertCircle className="h-4 w-4 mr-1" />
+                                Incorrect Answers
+                              </h4>
+                              <div className="space-y-1">
+                                {evaluation.incorrect_answers.map((answer, index) => (
+                                  <Badge key={index} variant="outline" className="border-red-500/30 text-red-300 mr-1 mb-1">
+                                    {answer}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {evaluation.strengths && evaluation.strengths.length > 0 && (
+                            <div>
+                              <h4 className="text-blue-400 font-medium flex items-center mb-2">
+                                <TrendingUp className="h-4 w-4 mr-1" />
+                                Strengths
+                              </h4>
+                              <ul className="text-sm text-gray-300 space-y-1">
+                                {evaluation.strengths.map((strength, index) => (
+                                  <li key={index} className="flex items-start">
+                                    <span className="text-blue-400 mr-2">•</span>
+                                    {strength}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {evaluation.areas_for_improvement && evaluation.areas_for_improvement.length > 0 && (
+                            <div>
+                              <h4 className="text-orange-400 font-medium flex items-center mb-2">
+                                <Target className="h-4 w-4 mr-1" />
+                                Areas for Improvement
+                              </h4>
+                              <ul className="text-sm text-gray-300 space-y-1">
+                                {evaluation.areas_for_improvement.map((area, index) => (
+                                  <li key={index} className="flex items-start">
+                                    <span className="text-orange-400 mr-2">•</span>
+                                    {area}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+
+                        {evaluation.detailed_feedback && (
+                          <div>
+                            <h4 className="text-white font-medium mb-2">Detailed Feedback</h4>
+                            <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-600">
+                              <p className="text-gray-300 whitespace-pre-wrap">{evaluation.detailed_feedback}</p>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="analytics" className="mt-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Card className="glass-effect">
+                    <CardHeader>
+                      <CardTitle className="text-white">Performance Distribution</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {['90-100%', '80-89%', '70-79%', '60-69%', 'Below 60%'].map((range, index) => {
+                          const [min, max] = range.includes('Below') 
+                            ? [0, 59] 
+                            : range.split('-').map(s => parseInt(s.replace('%', '')));
+                          
+                          const count = evaluations.filter(e => 
+                            range.includes('Below') 
+                              ? e.percentage < 60 
+                              : e.percentage >= min && e.percentage <= max
+                          ).length;
+                          
+                          const percentage = stats.totalEvaluations > 0 ? (count / stats.totalEvaluations) * 100 : 0;
+                          
+                          return (
+                            <div key={range} className="flex items-center justify-between">
+                              <span className="text-gray-300">{range}</span>
+                              <div className="flex items-center space-x-2">
+                                <div className="w-32 bg-slate-700 rounded-full h-2">
+                                  <div 
+                                    className="bg-blue-500 h-2 rounded-full" 
+                                    style={{ width: `${percentage}%` }}
+                                  ></div>
+                                </div>
+                                <span className="text-white font-medium w-12 text-right">{count}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="glass-effect">
+                    <CardHeader>
+                      <CardTitle className="text-white">Common Feedback Themes</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        <div>
+                          <h4 className="text-green-400 font-medium mb-2">Most Common Strengths</h4>
+                          <div className="space-y-1">
+                            {/* This would require more complex analysis in a real implementation */}
+                            <div className="text-sm text-gray-300">• Problem-solving approach</div>
+                            <div className="text-sm text-gray-300">• Clear explanations</div>
+                            <div className="text-sm text-gray-300">• Mathematical accuracy</div>
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="text-orange-400 font-medium mb-2">Areas Needing Attention</h4>
+                          <div className="space-y-1">
+                            <div className="text-sm text-gray-300">• Time management</div>
+                            <div className="text-sm text-gray-300">• Detailed explanations</div>
+                            <div className="text-sm text-gray-300">• Calculation errors</div>
+                          </div>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Tabbed Results */}
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-3 bg-slate-800">
-                  <TabsTrigger value="manual" className="data-[state=active]:bg-green-600">
-                    <GraduationCap className="h-4 w-4 mr-2" />
-                    Manual ({manualEvaluations.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="ai" className="data-[state=active]:bg-purple-600">
-                    <Brain className="h-4 w-4 mr-2" />
-                    AI ({aiEvaluations.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="combined" className="data-[state=active]:bg-blue-600">
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                    Combined
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="manual" className="mt-6">
-                  <div className="space-y-4">
-                    {manualEvaluations.length === 0 ? (
-                      <Card className="glass-effect">
-                        <CardContent className="text-center py-8">
-                          <GraduationCap className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                          <p className="text-gray-300">No manual evaluations yet</p>
-                        </CardContent>
-                      </Card>
-                    ) : (
-                      manualEvaluations.map((evaluation) => renderEvaluationCard(evaluation, false))
-                    )}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="ai" className="mt-6">
-                  <div className="space-y-4">
-                    {aiEvaluations.length === 0 ? (
-                      <Card className="glass-effect">
-                        <CardContent className="text-center py-8">
-                          <Brain className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                          <p className="text-gray-300">No AI evaluations yet</p>
-                        </CardContent>
-                      </Card>
-                    ) : (
-                      aiEvaluations.map((evaluation) => renderEvaluationCard(evaluation, true))
-                    )}
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="combined" className="mt-6">
-                  <div className="space-y-4">
-                    {/* Combine and sort all evaluations by date */}
-                    {[
-                      ...manualEvaluations.map(e => ({ ...e, isAI: false, sortDate: e.created_at })),
-                      ...aiEvaluations.map(e => ({ ...e, isAI: true, sortDate: e.timestamp }))
-                    ]
-                      .sort((a, b) => new Date(b.sortDate).getTime() - new Date(a.sortDate).getTime())
-                      .map((evaluation) => renderEvaluationCard(evaluation, evaluation.isAI))
-                    }
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+            </Tabs>
           )}
         </div>
       </DialogContent>

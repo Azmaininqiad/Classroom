@@ -62,6 +62,15 @@ export default function WelcomePage() {
     router.push('/events');
   };
 
+  const handleCoursePage = () => {
+    router.push('/coursepage');
+  };
+
+  const handleMcqPage = () => {
+    router.push('/mcqgeneration');
+  };
+  
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -150,6 +159,25 @@ export default function WelcomePage() {
                 <Calendar className="mr-2 h-5 w-5" />
                 Explore Events
               </Button>
+              <Button
+                onClick={handleCoursePage}
+                variant="secondary"
+                size="lg"
+                className="border-blue-500/20 text-blue-400 hover:bg-blue-500/10 text-lg px-8 py-6 rounded-xl backdrop-blur-sm"
+              >
+                <BookOpen className="mr-2 h-5 w-5" />
+                Browse Courses
+              </Button>
+              <Button
+                onClick={handleMcqPage}
+                variant="secondary"
+                size="lg"
+                className="border-blue-500/20 text-blue-400 hover:bg-blue-500/10 text-lg px-8 py-6 rounded-xl backdrop-blur-sm"
+              >
+                <Users className="mr-2 h-5 w-5" />
+                Generate MCQs
+              </Button>
+              
             </div>
 
             {/* Stats */}

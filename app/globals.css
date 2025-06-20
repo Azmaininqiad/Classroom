@@ -55,6 +55,7 @@
   .hover-lift {
     @apply transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl;
   }
+  
 }
 
 /* Custom scrollbar */

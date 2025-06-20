@@ -117,7 +117,7 @@ export default function ProfilePage() {
             .insert({
               user_id: userId,
               name: 'User',
-              email: userId.includes('@') ? userId : `${userId}@example.com`,
+              email: userId.includes('@') ? userId : `NULL`,
               bio: 'No bio available'
             })
             .select()

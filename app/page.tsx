@@ -69,6 +69,9 @@ export default function WelcomePage() {
   const handleMcqPage = () => {
     router.push('/mcqgeneration');
   };
+  const handleChatbotPage = () => {
+    router.push('/chatbot');
+  };
   
 
   if (loading) {
@@ -176,6 +179,15 @@ export default function WelcomePage() {
               >
                 <Users className="mr-2 h-5 w-5" />
                 Generate MCQs
+              </Button>
+              <Button
+                onClick={handleChatbotPage}
+                variant="secondary"
+                size="lg"
+                className="border-blue-500/20 text-blue-400 hover:bg-blue-500/10 text-lg px-8 py-6 rounded-xl backdrop-blur-sm"
+              >
+                <Users className="mr-2 h-5 w-5" />
+                Live Teacher
               </Button>
               
             </div>

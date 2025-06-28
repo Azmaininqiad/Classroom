@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, CheckCircle, XCircle, RotateCcw, Home, Clock, Award, Target } from 'lucide-react';
 import Link from 'next/link';
 
-const API_BASE_URL = 'http://localhost:8001';
+const API_BASE_URL = 'https://oneedu.onrender.com';
 
 interface Quiz {
   id: string;

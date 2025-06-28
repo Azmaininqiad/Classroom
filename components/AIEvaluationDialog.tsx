@@ -414,7 +414,7 @@ export default function AIEvaluationDialog({
                             <Badge className={`${getGradeColor(grade)} border mb-1`}>
                               {grade}
                             </Badge>
-                            <div className="text-sm text-white">{count}</div>
+                            <div className="text-sm text-white">String(count)</div>
                           </div>
                         ))}
                       </div>

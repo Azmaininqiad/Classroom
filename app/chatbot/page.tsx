@@ -11,7 +11,7 @@ export default function TavusVideoPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch("http://localhost:8000/api/start-tavus-conversation", {
+        const res = await fetch("https://oneedu.onrender.com/api/start-tavus-conversation", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({})

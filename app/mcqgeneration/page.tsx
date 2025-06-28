@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Upload, FileText, Loader2, Home, Clock, Sparkles, Zap, ChevronRight, FileUp, Target } from 'lucide-react';
 import Link from 'next/link';
 
-const API_BASE_URL = 'http://localhost:8001';
+const API_BASE_URL = 'https://oneedu.onrender.com';
 
 interface Quiz {
   id: string;

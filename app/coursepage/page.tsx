@@ -62,7 +62,7 @@ export default function CoursePage() {
     setError(null);
 
     try {
-      const response = await fetch('http://127.0.0.1:8000/generate-course', {
+      const response = await fetch('https://oneedu.onrender.com/generate-course', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -87,7 +87,7 @@ export default function CoursePage() {
       let errorMessage = error.message;
       
       if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        errorMessage = 'Cannot connect to backend server. Make sure the FastAPI server is running on http://127.0.0.1:8000';
+        errorMessage = 'Cannot connect to backend server. Make sure the FastAPI server is running on https://oneedu.onrender.com/';
       }
       
       setError(errorMessage);

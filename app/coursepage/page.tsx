@@ -62,7 +62,7 @@ export default function CoursePage() {
     setError(null);
 
     try {
-      const response = await fetch('http://0.0.0.0:10000/generate-course', {
+      const response = await fetch('https://oneedu.onrender.com/generate-course', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

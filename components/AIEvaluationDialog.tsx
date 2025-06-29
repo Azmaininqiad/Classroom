@@ -131,7 +131,7 @@ export default function AIEvaluationDialog({
         setCurrentStep('AI is analyzing the submission...');
         setProgress(50);
 
-        const response = await fetch('http://localhost:8000/api/evaluate/single', {
+        const response = await fetch('https://oneedu.onrender.com/api/evaluate/single', {
           method: 'POST',
           body: formData,
         });
@@ -164,7 +164,7 @@ export default function AIEvaluationDialog({
         setCurrentStep('AI is analyzing all submissions...');
         setProgress(30);
 
-        const response = await fetch('http://localhost:8000/api/evaluate/multiple', {
+        const response = await fetch('https://oneedu.onrender.com/api/evaluate/multiple', {
           method: 'POST',
           body: formData,
         });

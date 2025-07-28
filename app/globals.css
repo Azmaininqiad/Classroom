@@ -6,6 +6,48 @@
   --foreground-rgb: 255, 255, 255;
   --background-start-rgb: 15, 23, 42;
   --background-end-rgb: 30, 41, 59;
+  
+  /* Welcome Page Color Palette */
+  --welcome-bg-start: #0b0f19;
+  --welcome-bg-end: #1e1b3a;
+  --welcome-primary-start: #ff6a00;
+  --welcome-primary-end: #ff1b9c;
+  --welcome-accent: #a05eff;
+  --welcome-text-primary: #ffffff;
+  --welcome-text-secondary: #a0a0a0;
+  --welcome-card-bg: rgba(255, 255, 255, 0.05);
+  --welcome-border: rgba(255, 255, 255, 0.1);
+  
+  /* Gradient Variables */
+  --welcome-gradient-primary: linear-gradient(90deg, var(--welcome-primary-start), var(--welcome-primary-end));
+  --welcome-gradient-background: linear-gradient(135deg, var(--welcome-bg-start) 0%, var(--welcome-bg-end) 100%);
+  --welcome-gradient-text: linear-gradient(90deg, var(--welcome-primary-start), var(--welcome-primary-end));
+  
+  /* Typography Scale */
+  --welcome-text-hero: 3rem; /* 48px */
+  --welcome-text-hero-mobile: 2rem; /* 32px */
+  --welcome-text-subheadline: 1.5rem; /* 24px */
+  --welcome-text-subheadline-mobile: 1.125rem; /* 18px */
+  --welcome-text-body: 1.125rem; /* 18px */
+  --welcome-text-body-mobile: 1rem; /* 16px */
+  --welcome-text-feature-title: 1.25rem; /* 20px */
+  --welcome-text-feature-desc: 1rem; /* 16px */
+  --welcome-text-button: 1rem; /* 16px */
+  
+  /* Spacing Scale */
+  --welcome-spacing-xs: 0.5rem; /* 8px */
+  --welcome-spacing-sm: 1rem; /* 16px */
+  --welcome-spacing-md: 1.5rem; /* 24px */
+  --welcome-spacing-lg: 2rem; /* 32px */
+  --welcome-spacing-xl: 3rem; /* 48px */
+  --welcome-spacing-2xl: 5rem; /* 80px */
+  --welcome-spacing-section: var(--welcome-spacing-2xl);
+  --welcome-spacing-section-mobile: var(--welcome-spacing-lg);
+  
+  /* Effects */
+  --welcome-glow-primary: 0 0 20px rgba(255, 106, 0, 0.3);
+  --welcome-glow-accent: 0 0 20px rgba(160, 94, 255, 0.3);
+  --welcome-hover-transform: translateY(-2px) scale(1.02);
 }
 
 @layer base {
@@ -56,6 +98,224 @@
     @apply transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-2xl;
   }
   
+  /* Welcome Page Components */
+  .welcome-bg {
+    background: var(--welcome-gradient-background);
+  }
+  
+  .welcome-gradient-text {
+    background: var(--welcome-gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .welcome-hero-title {
+    font-size: var(--welcome-text-hero);
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  
+  .welcome-hero-subtitle {
+    font-size: var(--welcome-text-subheadline);
+    font-weight: 500;
+    color: var(--welcome-text-secondary);
+    line-height: 1.4;
+  }
+  
+  .welcome-body-text {
+    font-size: var(--welcome-text-body);
+    font-weight: 400;
+    color: var(--welcome-text-primary);
+    line-height: 1.6;
+  }
+  
+  .welcome-feature-card {
+    background: var(--welcome-card-bg);
+    border: 1px solid var(--welcome-border);
+    border-radius: 12px;
+    padding: var(--welcome-spacing-md);
+    transition: all 0.3s ease;
+  }
+  
+  .welcome-feature-card:hover {
+    transform: var(--welcome-hover-transform);
+    box-shadow: var(--welcome-glow-primary);
+  }
+  
+  .welcome-feature-title {
+    font-size: var(--welcome-text-feature-title);
+    font-weight: 600;
+    color: var(--welcome-text-primary);
+    margin-bottom: var(--welcome-spacing-xs);
+  }
+  
+  .welcome-feature-desc {
+    font-size: var(--welcome-text-feature-desc);
+    font-weight: 400;
+    color: var(--welcome-text-secondary);
+    line-height: 1.5;
+  }
+  
+  .welcome-btn-primary {
+    background: var(--welcome-gradient-primary);
+    color: var(--welcome-text-primary);
+    font-size: var(--welcome-text-button);
+    font-weight: 600;
+    padding: 12px 32px;
+    border-radius: 8px;
+    border: none;
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+  
+  .welcome-btn-primary:hover {
+    transform: scale(1.05);
+    box-shadow: var(--welcome-glow-primary);
+  }
+  
+  .welcome-btn-secondary {
+    background: transparent;
+    color: var(--welcome-accent);
+    font-size: var(--welcome-text-button);
+    font-weight: 600;
+    padding: 10px 30px;
+    border-radius: 8px;
+    border: 2px solid var(--welcome-accent);
+    transition: all 0.3s ease;
+    cursor: pointer;
+  }
+  
+  .welcome-btn-secondary:hover {
+    background: var(--welcome-accent);
+    color: var(--welcome-text-primary);
+    box-shadow: var(--welcome-glow-accent);
+  }
+  
+  /* Responsive Typography */
+  @media (max-width: 768px) {
+    .welcome-hero-title {
+      font-size: var(--welcome-text-hero-mobile);
+    }
+    
+    .welcome-hero-subtitle {
+      font-size: var(--welcome-text-subheadline-mobile);
+    }
+    
+    .welcome-body-text {
+      font-size: var(--welcome-text-body-mobile);
+    }
+  }
+  
+  /* Responsive Grid Utilities */
+  .welcome-feature-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  @media (min-width: 768px) {
+    .welcome-feature-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 2rem;
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .welcome-feature-grid {
+      gap: 3rem;
+    }
+  }
+  
+  /* Responsive Card Layout */
+  .welcome-feature-card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  @media (min-width: 1024px) {
+    .welcome-feature-card-content {
+      flex-direction: row;
+      gap: 1.5rem;
+    }
+  }
+  
+  /* Spacing Utilities */
+  .welcome-section-padding {
+    padding: var(--welcome-spacing-section) 0;
+  }
+  
+  .welcome-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--welcome-spacing-md);
+  }
+  
+  @media (max-width: 768px) {
+    .welcome-section-padding {
+      padding: var(--welcome-spacing-section-mobile) 0;
+    }
+    
+    .welcome-container {
+      padding: 0 var(--welcome-spacing-sm);
+    }
+  }
+}
+
+/* Accessibility Utilities */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Focus indicators */
+.focus-visible {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .welcome-gradient-text {
+    background: none;
+    -webkit-background-clip: unset;
+    -webkit-text-fill-color: unset;
+    background-clip: unset;
+    color: #ffffff;
+  }
+  
+  .welcome-btn-primary {
+    background: #ff6a00;
+    border: 2px solid #ffffff;
+  }
+  
+  .welcome-btn-secondary {
+    background: transparent;
+    border: 2px solid #a05eff;
+    color: #a05eff;
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .animate-pulse,
+  .animate-spin {
+    animation: none;
+  }
 }
 
 /* Custom scrollbar */

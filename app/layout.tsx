@@ -6,8 +6,8 @@ import { Toaster } from '@/components/ui/sonner';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'ClassRoom - Virtual Learning Platform',
-  description: 'A modern classroom management system for teachers and students',
+  title: 'oneedu - AI-Powered Education Platform',
+  description: 'Transform education with AI-powered course creation, smart classroom management, and personalized learning experiences.',
 };
 
 export default function RootLayout({
